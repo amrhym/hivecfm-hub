@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pgvector/pgvector-go"
 
-	"github.com/formbricks/hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/models"
 )
 
 const (

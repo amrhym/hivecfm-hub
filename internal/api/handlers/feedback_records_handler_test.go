@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/formbricks/hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/models"
 )
 
 // mockFeedbackRecordsService mocks FeedbackRecordsService for handler tests.

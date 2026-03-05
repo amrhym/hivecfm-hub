@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/formbricks/hub/internal/observability"
+	"github.com/amrhym/hivecfm-hub/internal/observability"
 )
 
 const requestIDHeader = "X-Request-ID"

@@ -1,6 +1,6 @@
 # Integration Tests
 
-This directory contains integration tests for the Formbricks Hub API.
+This directory contains integration tests for the HiveCFM Hub API.
 
 ## Prerequisites
 

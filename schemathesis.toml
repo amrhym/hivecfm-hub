@@ -1,4 +1,4 @@
-# Schemathesis configuration for Formbricks Hub API
+# Schemathesis configuration for HiveCFM Hub API
 # Documentation: https://schemathesis.readthedocs.io/en/stable/configuration/
 
 # Base URL for the API (can be overridden via --base-url flag)

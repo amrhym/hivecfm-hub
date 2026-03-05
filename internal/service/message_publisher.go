@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/formbricks/hub/internal/datatypes"
-	"github.com/formbricks/hub/internal/observability"
+	"github.com/amrhym/hivecfm-hub/internal/datatypes"
+	"github.com/amrhym/hivecfm-hub/internal/observability"
 )
 
 // Event represents an event that can be published to message providers (webhooks, email, etc.)

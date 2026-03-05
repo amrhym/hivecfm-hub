@@ -1,4 +1,4 @@
-name: Build & release Formbricks Hub Docker images
+name: Build & release HiveCFM Hub Docker images
 
 on:
   release:
@@ -138,7 +138,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "✅ Formbricks Hub Release Completed Successfully"
+          echo "✅ HiveCFM Hub Release Completed Successfully"
           echo ""
           echo "GHCR Version: ${GHCR_VERSION}"
           echo ""

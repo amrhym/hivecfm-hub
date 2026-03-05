@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/internal/repository"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/repository"
 )
 
 type mockEmbeddingClient struct {

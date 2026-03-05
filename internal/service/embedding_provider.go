@@ -12,9 +12,9 @@ import (
 	"github.com/riverqueue/river"
 	"golang.org/x/text/unicode/norm"
 
-	"github.com/formbricks/hub/internal/datatypes"
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/internal/observability"
+	"github.com/amrhym/hivecfm-hub/internal/datatypes"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/observability"
 )
 
 // EmbeddingProvider implements eventPublisher by enqueueing one River job per feedback record event

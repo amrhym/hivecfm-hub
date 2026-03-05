@@ -2,7 +2,7 @@ name: Build SDKs for pull request
 
 env:
   OAS_PATH: ./openapi.yaml
-  STAINLESS_ORG: formbricks
+  STAINLESS_ORG: hivecfm
   STAINLESS_PROJECT: hub
 
 on:

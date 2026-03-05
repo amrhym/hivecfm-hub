@@ -13,8 +13,8 @@ import (
 
 	standardwebhooks "github.com/standard-webhooks/standard-webhooks/libraries/go"
 
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/internal/observability"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/observability"
 )
 
 // Sentinel errors for webhook delivery (err113).

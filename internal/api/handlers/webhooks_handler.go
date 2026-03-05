@@ -9,11 +9,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/formbricks/hub/internal/api/response"
-	"github.com/formbricks/hub/internal/api/validation"
-	"github.com/formbricks/hub/internal/huberrors"
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/pkg/cursor"
+	"github.com/amrhym/hivecfm-hub/internal/api/response"
+	"github.com/amrhym/hivecfm-hub/internal/api/validation"
+	"github.com/amrhym/hivecfm-hub/internal/huberrors"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/pkg/cursor"
 )
 
 // WebhooksService defines the interface for webhooks business logic.

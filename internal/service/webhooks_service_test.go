@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/formbricks/hub/internal/datatypes"
-	"github.com/formbricks/hub/internal/huberrors"
-	"github.com/formbricks/hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/datatypes"
+	"github.com/amrhym/hivecfm-hub/internal/huberrors"
+	"github.com/amrhym/hivecfm-hub/internal/models"
 )
 
 type mockWebhooksRepo struct {

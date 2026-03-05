@@ -11,7 +11,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 
-	"github.com/formbricks/hub/internal/config"
+	"github.com/amrhym/hivecfm-hub/internal/config"
 )
 
 // newResource returns a resource with service name "hub-api" merged with default.

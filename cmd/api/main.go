@@ -1,4 +1,4 @@
-// Package main is the Formbricks Hub API server entrypoint.
+// Package main is the HiveCFM Hub API server entrypoint.
 package main
 
 import (
@@ -11,8 +11,8 @@ import (
 
 	pgxvec "github.com/pgvector/pgvector-go/pgx"
 
-	"github.com/formbricks/hub/internal/config"
-	"github.com/formbricks/hub/pkg/database"
+	"github.com/amrhym/hivecfm-hub/internal/config"
+	"github.com/amrhym/hivecfm-hub/pkg/database"
 )
 
 const (

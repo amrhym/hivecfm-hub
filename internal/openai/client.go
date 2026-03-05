@@ -11,8 +11,8 @@ import (
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/packages/param"
 
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/pkg/embeddings"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/pkg/embeddings"
 )
 
 var (

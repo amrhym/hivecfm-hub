@@ -11,9 +11,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/formbricks/hub/internal/datatypes"
-	"github.com/formbricks/hub/internal/huberrors"
-	"github.com/formbricks/hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/datatypes"
+	"github.com/amrhym/hivecfm-hub/internal/huberrors"
+	"github.com/amrhym/hivecfm-hub/internal/models"
 )
 
 // WebhooksRepository handles data access for webhooks.

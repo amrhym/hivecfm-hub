@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/formbricks/hub/internal/datatypes"
+	"github.com/amrhym/hivecfm-hub/internal/datatypes"
 )
 
 // Webhook represents a webhook endpoint.

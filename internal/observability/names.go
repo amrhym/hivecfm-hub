@@ -2,7 +2,7 @@
 package observability
 
 import (
-	"github.com/formbricks/hub/internal/datatypes"
+	"github.com/amrhym/hivecfm-hub/internal/datatypes"
 )
 
 // Metric names (OpenTelemetry).

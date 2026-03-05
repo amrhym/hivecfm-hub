@@ -11,9 +11,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/riverqueue/river"
 
-	"github.com/formbricks/hub/internal/datatypes"
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/pkg/cursor"
+	"github.com/amrhym/hivecfm-hub/internal/datatypes"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/pkg/cursor"
 )
 
 // ErrUserIdentifierRequired is returned when bulk delete is called without user_identifier (err113).

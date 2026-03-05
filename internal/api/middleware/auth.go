@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/formbricks/hub/internal/api/response"
+	"github.com/amrhym/hivecfm-hub/internal/api/response"
 )
 
 // Auth middleware validates API keys from the Authorization header

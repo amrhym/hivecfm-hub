@@ -20,15 +20,15 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	"github.com/formbricks/hub/internal/api/handlers"
-	"github.com/formbricks/hub/internal/api/middleware"
-	"github.com/formbricks/hub/internal/config"
-	"github.com/formbricks/hub/internal/googleai"
-	"github.com/formbricks/hub/internal/observability"
-	"github.com/formbricks/hub/internal/openai"
-	"github.com/formbricks/hub/internal/repository"
-	"github.com/formbricks/hub/internal/service"
-	"github.com/formbricks/hub/internal/workers"
+	"github.com/amrhym/hivecfm-hub/internal/api/handlers"
+	"github.com/amrhym/hivecfm-hub/internal/api/middleware"
+	"github.com/amrhym/hivecfm-hub/internal/config"
+	"github.com/amrhym/hivecfm-hub/internal/googleai"
+	"github.com/amrhym/hivecfm-hub/internal/observability"
+	"github.com/amrhym/hivecfm-hub/internal/openai"
+	"github.com/amrhym/hivecfm-hub/internal/repository"
+	"github.com/amrhym/hivecfm-hub/internal/service"
+	"github.com/amrhym/hivecfm-hub/internal/workers"
 )
 
 // App holds all server dependencies and coordinates startup and shutdown.

@@ -22,7 +22,7 @@ Fixes #(issue)
 ### Required
 
 - [ ] Filled out the "How to test" section in this PR
-- [ ] Read [Repository Guidelines](https://github.com/formbricks/hub/blob/main/AGENTS.md)
+- [ ] Read [Repository Guidelines](https://github.com/amrhym/hivecfm-hub/blob/main/AGENTS.md)
 - [ ] Self-reviewed my own code
 - [ ] Commented on my code in hard-to-understand bits
 - [ ] Ran `make build`

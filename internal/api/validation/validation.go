@@ -14,9 +14,9 @@ import (
 	"github.com/go-playground/form/v4"
 	"github.com/go-playground/validator/v10"
 
-	"github.com/formbricks/hub/internal/api/response"
-	"github.com/formbricks/hub/internal/huberrors"
-	"github.com/formbricks/hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/api/response"
+	"github.com/amrhym/hivecfm-hub/internal/huberrors"
+	"github.com/amrhym/hivecfm-hub/internal/models"
 )
 
 var (

@@ -11,10 +11,10 @@ import (
 	"github.com/google/uuid"
 	standardwebhooks "github.com/standard-webhooks/standard-webhooks/libraries/go"
 
-	"github.com/formbricks/hub/internal/datatypes"
-	"github.com/formbricks/hub/internal/huberrors"
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/pkg/cursor"
+	"github.com/amrhym/hivecfm-hub/internal/datatypes"
+	"github.com/amrhym/hivecfm-hub/internal/huberrors"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/pkg/cursor"
 )
 
 // WebhooksRepository defines the interface for webhooks data access.

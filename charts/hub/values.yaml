@@ -4,7 +4,7 @@
 replicaCount: 2
 
 image:
-  repository: formbricks/hub
+  repository: amrhym/hivecfm-hub
   # If empty, Chart.appVersion is used
   tag: ""
   pullPolicy: IfNotPresent

@@ -1,5 +1,5 @@
 -- +goose up
--- Initial schema for Formbricks Hub
+-- Initial schema for HiveCFM Hub
 
 -- Enable extensions
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -59,7 +59,7 @@ CREATE INDEX idx_feedback_records_value_number ON feedback_records(value_number)
 CREATE INDEX idx_feedback_records_user_identifier ON feedback_records(user_identifier);
 
 -- Composite indexes for common query patterns with tenant_id
--- These optimize queries that filter by tenant_id first (common in Formbricks Cloud)
+-- These optimize queries that filter by tenant_id first (common in HiveCFM Cloud)
 -- and then apply additional filters
 CREATE INDEX idx_feedback_records_tenant_user_identifier ON feedback_records(tenant_id, user_identifier);
 CREATE INDEX idx_feedback_records_tenant_collected_at ON feedback_records(tenant_id, collected_at);

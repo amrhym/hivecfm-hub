@@ -1,17 +1,17 @@
 apiVersion: v2
 name: hub
-description: Formbricks Hub - Experience Management API
+description: HiveCFM Hub - Experience Management API
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
 keywords:
-  - formbricks
+  - hivecfm
   - hub
   - xm
   - go
-home: https://github.com/formbricks/hub
+home: https://github.com/amrhym/hivecfm-hub
 maintainers:
-  - name: Formbricks
+  - name: HiveCFM
 annotations:
   artifacthub.io/changes: |
     - kind: added

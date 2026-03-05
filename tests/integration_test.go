@@ -17,14 +17,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/formbricks/hub/internal/api/handlers"
-	"github.com/formbricks/hub/internal/api/middleware"
-	"github.com/formbricks/hub/internal/api/response"
-	"github.com/formbricks/hub/internal/config"
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/internal/repository"
-	"github.com/formbricks/hub/internal/service"
-	"github.com/formbricks/hub/pkg/database"
+	"github.com/amrhym/hivecfm-hub/internal/api/handlers"
+	"github.com/amrhym/hivecfm-hub/internal/api/middleware"
+	"github.com/amrhym/hivecfm-hub/internal/api/response"
+	"github.com/amrhym/hivecfm-hub/internal/config"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/repository"
+	"github.com/amrhym/hivecfm-hub/internal/service"
+	"github.com/amrhym/hivecfm-hub/pkg/database"
 )
 
 // defaultTestDatabaseURL is the default Postgres URL used by compose (postgres/postgres/test_db).
@@ -158,7 +158,7 @@ func TestCreateFeedbackRecord(t *testing.T) {
 	// Test without authentication
 	t.Run("Unauthorized without API key", func(t *testing.T) {
 		reqBody := map[string]any{
-			"source_type":   "formbricks",
+			"source_type":   "hivecfm",
 			"submission_id": "feedback",
 			"field_id":      "feedback",
 			"field_type":    "text",
@@ -179,7 +179,7 @@ func TestCreateFeedbackRecord(t *testing.T) {
 	// Test with invalid API key
 	t.Run("Unauthorized with invalid API key", func(t *testing.T) {
 		reqBody := map[string]any{
-			"source_type":   "formbricks",
+			"source_type":   "hivecfm",
 			"submission_id": "feedback",
 			"field_id":      "feedback",
 			"field_type":    "text",
@@ -203,7 +203,7 @@ func TestCreateFeedbackRecord(t *testing.T) {
 	// Test with empty API key in header
 	t.Run("Unauthorized with empty API key", func(t *testing.T) {
 		reqBody := map[string]any{
-			"source_type":   "formbricks",
+			"source_type":   "hivecfm",
 			"submission_id": "feedback",
 			"field_id":      "feedback",
 			"field_type":    "text",
@@ -227,7 +227,7 @@ func TestCreateFeedbackRecord(t *testing.T) {
 	// Test with malformed Authorization header
 	t.Run("Unauthorized with malformed Authorization header", func(t *testing.T) {
 		reqBody := map[string]any{
-			"source_type":   "formbricks",
+			"source_type":   "hivecfm",
 			"submission_id": "feedback",
 			"field_id":      "feedback",
 			"field_type":    "text",
@@ -251,7 +251,7 @@ func TestCreateFeedbackRecord(t *testing.T) {
 	// Test with valid authentication (use unique submission_id to avoid 409 from leftover data)
 	t.Run("Success with valid API key", func(t *testing.T) {
 		reqBody := map[string]any{
-			"source_type":   "formbricks",
+			"source_type":   "hivecfm",
 			"submission_id": uuid.New().String(),
 			"tenant_id":     "test-tenant",
 			"field_id":      "feedback",
@@ -278,7 +278,7 @@ func TestCreateFeedbackRecord(t *testing.T) {
 		require.NoError(t, resp.Body.Close())
 
 		assert.NotEmpty(t, result.ID)
-		assert.Equal(t, "formbricks", result.SourceType)
+		assert.Equal(t, "hivecfm", result.SourceType)
 		assert.Equal(t, "feedback", result.FieldID)
 		assert.Equal(t, models.FieldTypeText, result.FieldType)
 		assert.NotNil(t, result.ValueText)
@@ -327,7 +327,7 @@ func TestListFeedbackRecords(t *testing.T) {
 
 	// Create a test feedback record first (unique submission_id per run)
 	reqBody := map[string]any{
-		"source_type":   "formbricks",
+		"source_type":   "hivecfm",
 		"submission_id": uuid.New().String(),
 		"tenant_id":     "test-tenant",
 		"field_id":      "nps_score",
@@ -379,7 +379,7 @@ func TestListFeedbackRecords(t *testing.T) {
 
 	// Test with filters
 	t.Run("List with source_type filter", func(t *testing.T) {
-		listURL := server.URL + "/v1/feedback-records?tenant_id=test-tenant&source_type=formbricks&limit=10"
+		listURL := server.URL + "/v1/feedback-records?tenant_id=test-tenant&source_type=hivecfm&limit=10"
 		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, listURL, http.NoBody)
 		require.NoError(t, err)
 		req.Header.Set("Authorization", "Bearer "+testAPIKey)
@@ -395,7 +395,7 @@ func TestListFeedbackRecords(t *testing.T) {
 		require.NoError(t, resp.Body.Close())
 
 		for _, exp := range result.Data {
-			assert.Equal(t, "formbricks", exp.SourceType)
+			assert.Equal(t, "hivecfm", exp.SourceType)
 		}
 	})
 
@@ -405,7 +405,7 @@ func TestListFeedbackRecords(t *testing.T) {
 		// Create 3 records for pagination
 		for i := range 3 {
 			body, _ := json.Marshal(map[string]any{
-				"source_type":   "formbricks",
+				"source_type":   "hivecfm",
 				"submission_id": uuid.New().String(),
 				"tenant_id":     tenantID,
 				"field_id":      "q1",
@@ -480,7 +480,7 @@ func TestFeedbackRecordsSubmissionID(t *testing.T) {
 	// Create two records with same submission_id (multi-field submission)
 	createPayload := func(fieldID string, value any) map[string]any {
 		p := map[string]any{
-			"source_type":   "formbricks",
+			"source_type":   "hivecfm",
 			"submission_id": subID,
 			"tenant_id":     tenantID,
 			"field_id":      fieldID,
@@ -548,7 +548,7 @@ func TestFeedbackRecordsSubmissionIDUniqueConstraint(t *testing.T) {
 	fieldID := "reason"
 
 	reqBody := map[string]any{
-		"source_type":   "formbricks",
+		"source_type":   "hivecfm",
 		"submission_id": subID,
 		"tenant_id":     tenantID,
 		"field_id":      fieldID,
@@ -600,7 +600,7 @@ func TestGetFeedbackRecord(t *testing.T) {
 
 	// Create a test feedback record (unique submission_id per run)
 	reqBody := map[string]any{
-		"source_type":   "formbricks",
+		"source_type":   "hivecfm",
 		"submission_id": uuid.New().String(),
 		"tenant_id":     "test-tenant",
 		"field_id":      "rating",
@@ -641,7 +641,7 @@ func TestGetFeedbackRecord(t *testing.T) {
 		require.NoError(t, resp.Body.Close())
 
 		assert.Equal(t, created.ID, result.ID)
-		assert.Equal(t, "formbricks", result.SourceType)
+		assert.Equal(t, "hivecfm", result.SourceType)
 	})
 
 	t.Run("Get non-existent feedback record", func(t *testing.T) {
@@ -685,7 +685,7 @@ func TestUpdateFeedbackRecord(t *testing.T) {
 
 	// Create a test feedback record (unique submission_id per run)
 	reqBody := map[string]any{
-		"source_type":   "formbricks",
+		"source_type":   "hivecfm",
 		"submission_id": uuid.New().String(),
 		"tenant_id":     "test-tenant",
 		"field_id":      "comment",
@@ -759,7 +759,7 @@ func TestDeleteFeedbackRecord(t *testing.T) {
 
 	// Create a test feedback record (unique submission_id per run)
 	reqBody := map[string]any{
-		"source_type":   "formbricks",
+		"source_type":   "hivecfm",
 		"submission_id": uuid.New().String(),
 		"tenant_id":     "test-tenant",
 		"field_id":      "temp",
@@ -821,7 +821,7 @@ func TestBulkDeleteFeedbackRecords(t *testing.T) {
 	tenantID := "test-tenant"
 	createPayload := func(fieldID string, valueNum float64) map[string]any {
 		return map[string]any{
-			"source_type":     "formbricks",
+			"source_type":     "hivecfm",
 			"submission_id":   subID,
 			"tenant_id":       tenantID,
 			"user_identifier": userID,
@@ -917,7 +917,7 @@ func TestBulkDeleteFeedbackRecords(t *testing.T) {
 			{tenantB, "fb2"},
 		} {
 			body, err := json.Marshal(map[string]any{
-				"source_type":     "formbricks",
+				"source_type":     "hivecfm",
 				"submission_id":   userIDTenant + "-" + item.fieldID,
 				"user_identifier": userIDTenant,
 				"tenant_id":       item.tenantID,
@@ -990,7 +990,7 @@ func TestFeedbackRecordsRepository_BulkDelete(t *testing.T) {
 
 	repo := repository.NewFeedbackRecordsRepository(db)
 	userID := "repo-bulk-delete-user"
-	sourceType := "formbricks"
+	sourceType := "hivecfm"
 
 	// Create two records with same user_identifier
 	const bulkDeleteTenant = "bulk-delete-tenant"

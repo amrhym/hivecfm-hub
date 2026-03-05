@@ -10,8 +10,8 @@ import (
 
 	"google.golang.org/genai"
 
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/pkg/embeddings"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/pkg/embeddings"
 )
 
 var (

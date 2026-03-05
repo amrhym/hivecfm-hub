@@ -2,12 +2,12 @@ services:
   # PostgreSQL database with pgvector extension for Hub
   postgres:
     image: pgvector/pgvector:pg18
-    container_name: formbricks_postgres
+    container_name: hivecfm_hub_postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: test_db
-    # HOST_PORT:CONTAINER_PORT — set POSTGRES_PORT in .env to avoid conflicts (e.g. 5433 if main Formbricks uses 5432)
+    # HOST_PORT:CONTAINER_PORT — set POSTGRES_PORT in .env to avoid conflicts (e.g. 5433 if main HiveCFM uses 5432)
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -24,7 +24,7 @@ services:
   # River UI - web dashboard for River job queue (webhook delivery jobs)
   riverui:
     image: ghcr.io/riverqueue/riverui:latest
-    container_name: formbricks_riverui
+    container_name: hivecfm_hub_riverui
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/test_db?sslmode=disable
       RIVER_BASIC_AUTH_USER: ${RIVER_BASIC_AUTH_USER}

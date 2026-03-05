@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	standardwebhooks "github.com/standard-webhooks/standard-webhooks/libraries/go"
 
-	"github.com/formbricks/hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/models"
 )
 
 type mockSenderRepo struct {

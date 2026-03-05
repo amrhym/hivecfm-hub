@@ -11,9 +11,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/formbricks/hub/internal/api/response"
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/internal/service"
+	"github.com/amrhym/hivecfm-hub/internal/api/response"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/service"
 )
 
 // SearchService defines the interface for semantic search and similar feedback.

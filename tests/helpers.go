@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/formbricks/hub/internal/config"
-	"github.com/formbricks/hub/pkg/database"
+	"github.com/amrhym/hivecfm-hub/internal/config"
+	"github.com/amrhym/hivecfm-hub/pkg/database"
 )
 
 const testAPIKey = "test-api-key-12345"
@@ -27,6 +27,6 @@ func CleanupTestData(t *testing.T) {
 
 	// Delete all feedback records created during tests
 	// Be careful with this in production!
-	_, err = db.Exec(ctx, "DELETE FROM feedback_records WHERE source_type = 'formbricks'")
+	_, err = db.Exec(ctx, "DELETE FROM feedback_records WHERE source_type = 'hivecfm'")
 	require.NoError(t, err)
 }

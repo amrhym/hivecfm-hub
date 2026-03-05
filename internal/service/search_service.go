@@ -11,9 +11,9 @@ import (
 	"github.com/hashicorp/golang-lru/v2"
 	"golang.org/x/sync/singleflight"
 
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/internal/observability"
-	"github.com/formbricks/hub/internal/repository"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/observability"
+	"github.com/amrhym/hivecfm-hub/internal/repository"
 )
 
 const searchQueryEmbeddingCacheName = "search_query_embedding"

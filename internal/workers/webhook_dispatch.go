@@ -9,9 +9,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/riverqueue/river"
 
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/internal/observability"
-	"github.com/formbricks/hub/internal/service"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/observability"
+	"github.com/amrhym/hivecfm-hub/internal/service"
 )
 
 // WebhookDispatchWorker delivers one event to one webhook endpoint.

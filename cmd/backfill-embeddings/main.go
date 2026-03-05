@@ -17,13 +17,13 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
-	"github.com/formbricks/hub/internal/config"
-	"github.com/formbricks/hub/internal/googleai"
-	"github.com/formbricks/hub/internal/openai"
-	"github.com/formbricks/hub/internal/repository"
-	"github.com/formbricks/hub/internal/service"
-	"github.com/formbricks/hub/internal/workers"
-	"github.com/formbricks/hub/pkg/database"
+	"github.com/amrhym/hivecfm-hub/internal/config"
+	"github.com/amrhym/hivecfm-hub/internal/googleai"
+	"github.com/amrhym/hivecfm-hub/internal/openai"
+	"github.com/amrhym/hivecfm-hub/internal/repository"
+	"github.com/amrhym/hivecfm-hub/internal/service"
+	"github.com/amrhym/hivecfm-hub/internal/workers"
+	"github.com/amrhym/hivecfm-hub/pkg/database"
 )
 
 const (

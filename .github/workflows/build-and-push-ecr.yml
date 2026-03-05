@@ -1,6 +1,6 @@
 name: Build & Push to AWS ECR
 
-# Builds Formbricks Hub Docker images for ECR deployment:
+# Builds HiveCFM Hub Docker images for ECR deployment:
 # - workflow_call: Used by release workflow with explicit SemVer versions
 # - workflow_dispatch: Manual trigger with required version input
 

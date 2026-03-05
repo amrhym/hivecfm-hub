@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/formbricks/hub/internal/models"
-	"github.com/formbricks/hub/internal/service"
+	"github.com/amrhym/hivecfm-hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/service"
 )
 
 type mockSearchService struct {

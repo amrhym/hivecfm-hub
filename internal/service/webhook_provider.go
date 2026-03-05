@@ -9,7 +9,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
-	"github.com/formbricks/hub/internal/observability"
+	"github.com/amrhym/hivecfm-hub/internal/observability"
 )
 
 // WebhookDispatchInserter inserts webhook_dispatch jobs in batch (e.g. River client).

@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/formbricks/hub/internal/models"
+	"github.com/amrhym/hivecfm-hub/internal/models"
 )
 
 // ErrInvalidCursor is returned when the cursor parameter is malformed or invalid.

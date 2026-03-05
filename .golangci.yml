@@ -30,7 +30,7 @@ formatters:
       sections:
         - standard
         - default
-        - prefix(github.com/formbricks/hub)
+        - prefix(github.com/hivecfm/hub)
     gofumpt:
       extra-rules: true
 

@@ -1,16 +1,16 @@
 openapi: 3.1.0
 info:
-    title: Formbricks Hub API
+    title: HiveCFM Hub API
     description: |
-        Feedback record storage and webhook delivery for the Formbricks ecosystem.
+        Feedback record storage and webhook delivery for the HiveCFM ecosystem.
         Store feedback records and subscribe to events via webhooks (Standard Webhooks).
         Webhook payloads are described by WebhookDeliveryPayload; use the signing_key to verify requests.
-        Full Documentation: https://hub.formbricks.com
-        Quick Start: https://hub.formbricks.com/quickstart
+        Full Documentation: https://hub.hivecfm.com
+        Quick Start: https://hub.hivecfm.com/quickstart
     contact:
-        name: Formbricks Team
-        url: https://formbricks.com
-        email: hola@formbricks.com
+        name: HiveCFM Team
+        url: https://hivecfm.com
+        email: support@hivecfm.com
     license:
         name: Apache-2.0
         url: https://www.apache.org/licenses/LICENSE-2.0
@@ -207,7 +207,7 @@ paths:
                                         title: "Bad Request"
                                         status: 400
                                         detail: "Validation failed"
-                                        instance: "https://hub.formbricks.com/v1/feedback-records"
+                                        instance: "https://hub.hivecfm.com/v1/feedback-records"
                                         errors:
                                             - location: "body.field_id"
                                               message: "Field is required"
@@ -601,7 +601,7 @@ paths:
                                         title: "Not Found"
                                         status: 404
                                         detail: "Feedback record with ID '018e1234-5678-9abc-def0-123456789abc' not found"
-                                        instance: "https://hub.formbricks.com/v1/feedback-records/018e1234-5678-9abc-def0-123456789abc"
+                                        instance: "https://hub.hivecfm.com/v1/feedback-records/018e1234-5678-9abc-def0-123456789abc"
                                 validation_error:
                                     summary: Validation error
                                     value:
@@ -609,7 +609,7 @@ paths:
                                         title: "Bad Request"
                                         status: 400
                                         detail: "Invalid update request"
-                                        instance: "https://hub.formbricks.com/v1/feedback-records/018e1234-5678-9abc-def0-123456789abc"
+                                        instance: "https://hub.hivecfm.com/v1/feedback-records/018e1234-5678-9abc-def0-123456789abc"
                                         errors:
                                             - location: "body.value_text"
                                               message: "Text value cannot be empty"

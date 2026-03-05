@@ -1,4 +1,4 @@
-module github.com/formbricks/hub
+module github.com/amrhym/hivecfm-hub
 
 go 1.25.7
 
