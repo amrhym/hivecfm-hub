@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -147,7 +148,7 @@ func run() int {
 	opts := &river.InsertOpts{
 		Queue:       service.SentimentQueueName,
 		MaxAttempts: defaultSentimentMaxAttempts,
-		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByPeriod: 24 * 60 * 60},
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByPeriod: 24 * time.Hour},
 	}
 
 	enqueued := 0
