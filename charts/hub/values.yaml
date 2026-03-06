@@ -112,6 +112,12 @@ config:
     WEBHOOK_DELIVERY_MAX_ATTEMPTS: "3"
     WEBHOOK_MAX_FAN_OUT_PER_EVENT: "500"
     WEBHOOK_MAX_COUNT: "500"
+    # Embedding provider: "openai" or "google". Both EMBEDDING_PROVIDER and EMBEDDING_MODEL must be set to enable embeddings.
+    # EMBEDDING_PROVIDER: "openai"
+    # EMBEDDING_MODEL: "embedding-3"
+    # Custom base URL for OpenAI-compatible providers (e.g. ZhipuAI: https://open.bigmodel.cn/api/paas/v4/)
+    # EMBEDDING_PROVIDER_BASE_URL: ""
+    # EMBEDDING_NORMALIZE: "false"
 
 secrets:
   create: true

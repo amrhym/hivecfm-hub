@@ -34,43 +34,64 @@ type Client struct {
 	normalize  bool
 }
 
-// ClientOption configures the Client.
-type ClientOption func(*Client)
+// clientConfig collects options before SDK client creation (e.g. base URL must be known upfront).
+type clientConfig struct {
+	baseURL   string
+	model     string
+	normalize bool
+}
 
-// WithDimensions sets the requested embedding dimension (must match DB column).
+// ClientOption configures the Client.
+type ClientOption func(*clientConfig)
+
+// WithBaseURL sets a custom base URL for the API (e.g. for OpenAI-compatible providers like ZhipuAI).
+func WithBaseURL(baseURL string) ClientOption {
+	return func(cfg *clientConfig) {
+		cfg.baseURL = baseURL
+	}
+}
+
+// WithDimensions is kept for API compatibility but dimensions are fixed at models.EmbeddingVectorDimensions.
 func WithDimensions(dim int) ClientOption {
-	return func(c *Client) {
-		c.dimensions = dim
+	return func(cfg *clientConfig) {
+		// dimensions override not stored in clientConfig; applied directly after SDK creation.
+		// This is a no-op in the config phase; handled below in NewClient.
 	}
 }
 
 // WithModel sets the embedding model name. Empty uses default.
 func WithModel(model string) ClientOption {
-	return func(c *Client) {
-		c.model = model
+	return func(cfg *clientConfig) {
+		cfg.model = model
 	}
 }
 
 // WithNormalize enables L2 normalization of the embedding vector before returning (e.g. before storing or caching).
 func WithNormalize(normalize bool) ClientOption {
-	return func(c *Client) {
-		c.normalize = normalize
+	return func(cfg *clientConfig) {
+		cfg.normalize = normalize
 	}
 }
 
 // NewClient creates an OpenAI embeddings client using the official SDK.
 // Embedding dimension is fixed (models.EmbeddingVectorDimensions); WithDimensions is optional for overrides.
 func NewClient(apiKey string, opts ...ClientOption) *Client {
-	client := &Client{
-		sdk:        openaisdk.NewClient(option.WithAPIKey(apiKey)),
-		dimensions: models.EmbeddingVectorDimensions,
-	}
-
+	cfg := &clientConfig{}
 	for _, opt := range opts {
-		opt(client)
+		opt(cfg)
 	}
 
-	return client
+	sdkOpts := []option.RequestOption{option.WithAPIKey(apiKey)}
+	if cfg.baseURL != "" {
+		sdkOpts = append(sdkOpts, option.WithBaseURL(cfg.baseURL))
+	}
+
+	return &Client{
+		sdk:        openaisdk.NewClient(sdkOpts...),
+		dimensions: models.EmbeddingVectorDimensions,
+		model:      cfg.model,
+		normalize:  cfg.normalize,
+	}
 }
 
 // CreateEmbedding returns the embedding vector for the given text using the configured model.

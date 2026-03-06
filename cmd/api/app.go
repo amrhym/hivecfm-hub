@@ -211,10 +211,14 @@ func NewApp(cfg *config.Config, db *pgxpool.Pool) (*App, error) {
 
 		switch embeddingProviderName {
 		case embeddingProviderOpenAI:
-			embeddingClient = openai.NewClient(cfg.EmbeddingProviderAPIKey,
+			clientOpts := []openai.ClientOption{
 				openai.WithModel(embeddingModel),
 				openai.WithNormalize(cfg.EmbeddingNormalize),
-			)
+			}
+			if cfg.EmbeddingProviderBaseURL != "" {
+				clientOpts = append(clientOpts, openai.WithBaseURL(cfg.EmbeddingProviderBaseURL))
+			}
+			embeddingClient = openai.NewClient(cfg.EmbeddingProviderAPIKey, clientOpts...)
 		case embeddingProviderGoogle:
 			googleClient, err := googleai.NewClient(context.Background(), cfg.EmbeddingProviderAPIKey,
 				googleai.WithModel(embeddingModel),

@@ -54,6 +54,8 @@ type Config struct {
 
 	// Embeddings: optional. Enabled only when both EMBEDDING_PROVIDER and EMBEDDING_MODEL are set and provider is supported.
 	EmbeddingProviderAPIKey string
+	// Embeddings: custom base URL for OpenAI-compatible providers (e.g. ZhipuAI); env EMBEDDING_PROVIDER_BASE_URL. Optional.
+	EmbeddingProviderBaseURL string
 	// Embeddings: provider name (e.g. openai, google); env EMBEDDING_PROVIDER. Required (with EmbeddingModel) to enable embeddings.
 	EmbeddingProvider string
 	// Embeddings: model name; env EMBEDDING_MODEL. Required (with EmbeddingProvider) to enable embeddings; no default.
@@ -200,7 +202,8 @@ func Load() (*Config, error) {
 		ShutdownTimeout:                 time.Duration(shutdownTimeoutSecs) * time.Second,
 		WebhookMaxCount:                 webhookMaxCount,
 
-		EmbeddingProviderAPIKey: getEnv("EMBEDDING_PROVIDER_API_KEY", ""),
+		EmbeddingProviderAPIKey:  getEnv("EMBEDDING_PROVIDER_API_KEY", ""),
+		EmbeddingProviderBaseURL: getEnv("EMBEDDING_PROVIDER_BASE_URL", ""),
 		EmbeddingProvider:       getEnv("EMBEDDING_PROVIDER", ""),
 		EmbeddingModel:          getEnv("EMBEDDING_MODEL", ""),
 		EmbeddingMaxConcurrent:  embeddingMaxConcurrent,
