@@ -21,10 +21,10 @@ const searchQueryEmbeddingCacheName = "search_query_embedding"
 
 // Sentiment re-ranking tuning constants.
 const (
-	// sentimentBoostFactor is the maximum score multiplier boost for matching sentiment (e.g. 0.20 = up to 20% boost).
-	sentimentBoostFactor = 0.20
-	// sentimentPenaltyFactor is the maximum score multiplier penalty for opposing sentiment (e.g. 0.20 = up to 20% penalty).
-	sentimentPenaltyFactor = 0.20
+	// sentimentBoostFactor is the maximum score multiplier boost for matching sentiment (e.g. 0.35 = up to 35% boost).
+	sentimentBoostFactor = 0.35
+	// sentimentPenaltyFactor is the maximum score multiplier penalty for opposing sentiment (e.g. 0.35 = up to 35% penalty).
+	sentimentPenaltyFactor = 0.35
 )
 
 // SentimentClassifier classifies the sentiment of a text query.
