@@ -21,6 +21,7 @@ RUN go mod download
 # Build the application
 COPY . .
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /build/bin/api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /build/bin/backfill-sentiment ./cmd/backfill-sentiment
 
 # =============================================================================
 # Stage 2: Runtime
@@ -36,6 +37,7 @@ WORKDIR /app
 
 # Copy binary and migration tools from builder
 COPY --from=builder /build/bin/api /app/api
+COPY --from=builder /build/bin/backfill-sentiment /app/backfill-sentiment
 COPY --from=builder /go/bin/goose /usr/local/bin/goose
 COPY --from=builder /go/bin/river /usr/local/bin/river
 
