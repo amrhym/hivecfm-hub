@@ -3,6 +3,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -34,6 +35,7 @@ type FeedbackRecordsRepository interface {
 		cursorCollectedAt time.Time, cursorID uuid.UUID,
 	) ([]models.FeedbackRecord, bool, error)
 	Update(ctx context.Context, id uuid.UUID, req *models.UpdateFeedbackRecordRequest) (*models.FeedbackRecord, error)
+	UpdateMetadata(ctx context.Context, id uuid.UUID, metadata json.RawMessage) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	BulkDelete(ctx context.Context, userIdentifier string, tenantID *string) ([]uuid.UUID, error)
 }
@@ -230,6 +232,37 @@ func (s *FeedbackRecordsService) SetEmbedding(
 
 	if err := s.embeddingsRepo.Upsert(ctx, feedbackRecordID, model, embedding); err != nil {
 		return fmt.Errorf("upsert embedding: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateMetadata merges newMeta into the existing metadata of a feedback record.
+// Existing keys are preserved unless overwritten by newMeta.
+func (s *FeedbackRecordsService) UpdateMetadata(ctx context.Context, id uuid.UUID, newMeta map[string]interface{}) error {
+	record, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("get feedback record for metadata update: %w", err)
+	}
+
+	existing := make(map[string]interface{})
+	if len(record.Metadata) > 0 {
+		if err := json.Unmarshal(record.Metadata, &existing); err != nil {
+			return fmt.Errorf("unmarshal existing metadata: %w", err)
+		}
+	}
+
+	for k, v := range newMeta {
+		existing[k] = v
+	}
+
+	merged, err := json.Marshal(existing)
+	if err != nil {
+		return fmt.Errorf("marshal merged metadata: %w", err)
+	}
+
+	if err := s.repo.UpdateMetadata(ctx, id, merged); err != nil {
+		return fmt.Errorf("update metadata: %w", err)
 	}
 
 	return nil

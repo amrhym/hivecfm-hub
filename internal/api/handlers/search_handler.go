@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -18,10 +19,10 @@ import (
 
 // SearchService defines the interface for semantic search and similar feedback.
 type SearchService interface {
-	SemanticSearch(ctx context.Context, query, tenantID string, limit int, minScore float64, cursor string) (
-		service.SearchResult, error)
+	SemanticSearch(ctx context.Context, query, tenantID string, limit int, minScore float64, cursor string,
+		filters *models.SearchFilters) (service.SearchResult, error)
 	SimilarFeedback(ctx context.Context, feedbackRecordID uuid.UUID, tenantID string, limit int,
-		minScore float64, cursor string) (service.SearchResult, error)
+		minScore float64, cursor string, filters *models.SearchFilters) (service.SearchResult, error)
 }
 
 // SearchHandler handles HTTP requests for semantic search and similar feedback.
@@ -36,8 +37,11 @@ func NewSearchHandler(service SearchService) *SearchHandler {
 
 // SemanticSearchRequest is the body for POST /v1/feedback-records/search/semantic (snake_case for consistency with data model).
 type SemanticSearchRequest struct {
-	Query    string `json:"query"`
-	TenantID string `json:"tenant_id"`
+	Query    string  `json:"query"`
+	TenantID string  `json:"tenant_id"`
+	SourceID *string `json:"source_id,omitempty"`
+	Since    *string `json:"since,omitempty"`
+	Until    *string `json:"until,omitempty"`
 }
 
 // SemanticSearchResponse is the response for semantic search and similar feedback (consistent with list endpoints: data, limit).
@@ -47,12 +51,18 @@ type SemanticSearchResponse struct {
 	NextCursor string                     `json:"next_cursor,omitempty"`
 }
 
-// SemanticSearchResultItem is one result: feedback_record_id, score, field_label, value_text (snake_case).
+// SemanticSearchResultItem is one result with enriched fields for display (snake_case).
 type SemanticSearchResultItem struct {
 	FeedbackRecordID uuid.UUID `json:"feedback_record_id"`
 	Score            float64   `json:"score"`
 	FieldLabel       string    `json:"field_label"`
-	ValueText        string    `json:"value_text"` // value_text of the feedback record (the text that was embedded)
+	ValueText        string    `json:"value_text"`
+	SourceID         string    `json:"source_id"`
+	SourceName       string    `json:"source_name"`
+	SubmissionID     string    `json:"submission_id"`
+	CollectedAt      string    `json:"collected_at"`
+	Sentiment        string    `json:"sentiment,omitempty"`
+	SentimentScore   float64   `json:"sentiment_score,omitempty"`
 }
 
 const (
@@ -95,7 +105,9 @@ func (h *SearchHandler) SemanticSearch(w http.ResponseWriter, r *http.Request) {
 	cursor := strings.TrimSpace(r.URL.Query().Get("cursor"))
 	minScore := parseMinScore(r.URL.Query().Get("min_score"))
 
-	res, err := h.service.SemanticSearch(r.Context(), req.Query, req.TenantID, limit, minScore, cursor)
+	filters := parseSearchFilters(req.SourceID, req.Since, req.Until)
+
+	res, err := h.service.SemanticSearch(r.Context(), req.Query, req.TenantID, limit, minScore, cursor, filters)
 	if err != nil {
 		if errors.Is(err, service.ErrMissingTenantID) {
 			response.RespondBadRequest(w, "tenant_id is required")
@@ -166,7 +178,7 @@ func (h *SearchHandler) SimilarFeedback(w http.ResponseWriter, r *http.Request) 
 	cursor := strings.TrimSpace(r.URL.Query().Get("cursor"))
 	minScore := parseMinScore(r.URL.Query().Get("min_score"))
 
-	res, err := h.service.SimilarFeedback(r.Context(), id, tenantID, limit, minScore, cursor)
+	res, err := h.service.SimilarFeedback(r.Context(), id, tenantID, limit, minScore, cursor, nil)
 	if err != nil {
 		if errors.Is(err, service.ErrEmbeddingNotFound) {
 			response.RespondNotFound(w, "Feedback record has no embedding for the current model")
@@ -241,8 +253,45 @@ func toResultItems(results []models.FeedbackRecordWithScore) []SemanticSearchRes
 			Score:            results[i].Score,
 			FieldLabel:       results[i].FieldLabel,
 			ValueText:        results[i].ValueText,
+			SourceID:         results[i].SourceID,
+			SourceName:       results[i].SourceName,
+			SubmissionID:     results[i].SubmissionID,
+			CollectedAt:      results[i].CollectedAt.Format(time.RFC3339),
+			Sentiment:        results[i].Sentiment,
+			SentimentScore:   results[i].SentimentScore,
 		}
 	}
 
 	return items
+}
+
+// parseSearchFilters builds SearchFilters from optional request fields. Returns nil when no filters are set.
+func parseSearchFilters(sourceID, since, until *string) *models.SearchFilters {
+	var f models.SearchFilters
+	hasFilter := false
+
+	if sourceID != nil && *sourceID != "" {
+		f.SourceID = sourceID
+		hasFilter = true
+	}
+
+	if since != nil && *since != "" {
+		if t, err := time.Parse(time.RFC3339, *since); err == nil {
+			f.Since = &t
+			hasFilter = true
+		}
+	}
+
+	if until != nil && *until != "" {
+		if t, err := time.Parse(time.RFC3339, *until); err == nil {
+			f.Until = &t
+			hasFilter = true
+		}
+	}
+
+	if !hasFilter {
+		return nil
+	}
+
+	return &f
 }

@@ -186,6 +186,7 @@ func NewApp(cfg *config.Config, db *pgxpool.Pool) (*App, error) {
 	if embeddingProviderName != "" {
 		embeddingDocPrefix = service.EmbeddingPrefixForProvider(embeddingProviderName)
 		queues[service.EmbeddingsQueueName] = river.QueueConfig{MaxWorkers: cfg.EmbeddingMaxConcurrent}
+		queues[service.SentimentQueueName] = river.QueueConfig{MaxWorkers: cfg.SentimentMaxConcurrent}
 	}
 
 	feedbackRecordsService := service.NewFeedbackRecordsService(
@@ -236,6 +237,10 @@ func NewApp(cfg *config.Config, db *pgxpool.Pool) (*App, error) {
 		embeddingWorker := workers.NewFeedbackEmbeddingWorker(
 			feedbackRecordsService, embeddingClient, embeddingDocPrefix, embeddingMetrics)
 		river.AddWorker(riverWorkers, embeddingWorker)
+
+		chatClient := openai.NewChatClient(cfg.EmbeddingProviderAPIKey, cfg.SentimentModel)
+		sentimentWorker := workers.NewSentimentAnalysisWorker(chatClient, feedbackRecordsService)
+		river.AddWorker(riverWorkers, sentimentWorker)
 
 		const searchQueryCacheSize = 1000
 
@@ -305,6 +310,13 @@ func NewApp(cfg *config.Config, db *pgxpool.Pool) (*App, error) {
 			embeddingMetrics,
 		)
 		messageManager.RegisterProvider(embeddingProv)
+
+		sentimentProv := service.NewSentimentProvider(
+			riverClient,
+			service.SentimentQueueName,
+			cfg.SentimentMaxAttempts,
+		)
+		messageManager.RegisterProvider(sentimentProv)
 	}
 
 	webhooksService := service.NewWebhooksService(webhooksRepo, messageManager, cfg.WebhookMaxCount)

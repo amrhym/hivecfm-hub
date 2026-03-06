@@ -39,10 +39,12 @@ type mockEmbeddingsRepoForSearch struct {
 	nearestFunc              func(
 		ctx context.Context, model string, queryEmbedding []float32,
 		tenantID string, limit int, excludeID *uuid.UUID, minScore float64,
+		filters *models.SearchFilters,
 	) ([]models.FeedbackRecordWithScore, bool, error)
 	nearestAfterFunc func(
 		ctx context.Context, model string, queryEmbedding []float32,
 		tenantID string, limit int, lastDistance float64, lastID uuid.UUID, excludeID *uuid.UUID, minScore float64,
+		filters *models.SearchFilters,
 	) ([]models.FeedbackRecordWithScore, bool, error)
 }
 
@@ -58,9 +60,10 @@ func (m *mockEmbeddingsRepoForSearch) GetEmbeddingByFeedbackRecordAndModelAndTen
 
 func (m *mockEmbeddingsRepoForSearch) NearestFeedbackRecordsByEmbedding(
 	ctx context.Context, model string, queryEmbedding []float32, tenantID string, limit int, excludeID *uuid.UUID, minScore float64,
+	filters *models.SearchFilters,
 ) ([]models.FeedbackRecordWithScore, bool, error) {
 	if m.nearestFunc != nil {
-		return m.nearestFunc(ctx, model, queryEmbedding, tenantID, limit, excludeID, minScore)
+		return m.nearestFunc(ctx, model, queryEmbedding, tenantID, limit, excludeID, minScore, filters)
 	}
 
 	return nil, false, nil
@@ -69,9 +72,10 @@ func (m *mockEmbeddingsRepoForSearch) NearestFeedbackRecordsByEmbedding(
 func (m *mockEmbeddingsRepoForSearch) NearestFeedbackRecordsByEmbeddingAfterCursor(
 	ctx context.Context, model string, queryEmbedding []float32, tenantID string, limit int,
 	lastDistance float64, lastFeedbackRecordID uuid.UUID, excludeID *uuid.UUID, minScore float64,
+	filters *models.SearchFilters,
 ) ([]models.FeedbackRecordWithScore, bool, error) {
 	if m.nearestAfterFunc != nil {
-		return m.nearestAfterFunc(ctx, model, queryEmbedding, tenantID, limit, lastDistance, lastFeedbackRecordID, excludeID, minScore)
+		return m.nearestAfterFunc(ctx, model, queryEmbedding, tenantID, limit, lastDistance, lastFeedbackRecordID, excludeID, minScore, filters)
 	}
 
 	return nil, false, nil
@@ -84,7 +88,7 @@ func TestSearchService_SemanticSearch(t *testing.T) {
 			EmbeddingsRepo:  &mockEmbeddingsRepoForSearch{},
 			Model:           "test-model",
 		})
-		res, err := svc.SemanticSearch(context.Background(), "query", "", 10, 0, "")
+		res, err := svc.SemanticSearch(context.Background(), "query", "", 10, 0, "", nil)
 		assert.Empty(t, res.Results)
 		assert.ErrorIs(t, err, ErrMissingTenantID)
 	})
@@ -95,7 +99,7 @@ func TestSearchService_SemanticSearch(t *testing.T) {
 			EmbeddingsRepo:  &mockEmbeddingsRepoForSearch{},
 			Model:           "test-model",
 		})
-		res, err := svc.SemanticSearch(context.Background(), "  ", "tenant-1", 10, 0, "")
+		res, err := svc.SemanticSearch(context.Background(), "  ", "tenant-1", 10, 0, "", nil)
 		assert.Empty(t, res.Results)
 		assert.ErrorIs(t, err, ErrEmptyQuery)
 	})
@@ -123,6 +127,7 @@ func TestSearchService_SemanticSearch(t *testing.T) {
 				nearestFunc: func(
 					_ context.Context, model string, queryEmbedding []float32,
 					tenantID string, limit int, excludeID *uuid.UUID, minScore float64,
+					_ *models.SearchFilters,
 				) ([]models.FeedbackRecordWithScore, bool, error) {
 					nearestCalled = true
 
@@ -140,7 +145,7 @@ func TestSearchService_SemanticSearch(t *testing.T) {
 			},
 			Model: "test-model",
 		})
-		res, err := svc.SemanticSearch(context.Background(), "login slow", "env-1", 10, 0.5, "")
+		res, err := svc.SemanticSearch(context.Background(), "login slow", "env-1", 10, 0.5, "", nil)
 		require.NoError(t, err)
 		require.True(t, queryClientCalled)
 		require.True(t, nearestCalled)
@@ -157,7 +162,7 @@ func TestSearchService_SimilarFeedback(t *testing.T) {
 			EmbeddingsRepo:  &mockEmbeddingsRepoForSearch{},
 			Model:           "test-model",
 		})
-		res, err := svc.SimilarFeedback(context.Background(), uuid.MustParse("018e1234-5678-9abc-def0-123456789abc"), "", 10, 0, "")
+		res, err := svc.SimilarFeedback(context.Background(), uuid.MustParse("018e1234-5678-9abc-def0-123456789abc"), "", 10, 0, "", nil)
 		assert.Empty(t, res.Results)
 		assert.ErrorIs(t, err, ErrMissingTenantID)
 	})
@@ -176,7 +181,7 @@ func TestSearchService_SimilarFeedback(t *testing.T) {
 			},
 			Model: "test-model",
 		})
-		res, err := svc.SimilarFeedback(context.Background(), rid, "env-1", 10, 0, "")
+		res, err := svc.SimilarFeedback(context.Background(), rid, "env-1", 10, 0, "", nil)
 		assert.Empty(t, res.Results)
 		assert.ErrorIs(t, err, repository.ErrEmbeddingNotFound)
 	})
@@ -197,6 +202,7 @@ func TestSearchService_SimilarFeedback(t *testing.T) {
 				nearestFunc: func(
 					_ context.Context, model string, _ []float32,
 					tenantID string, limit int, excludeID *uuid.UUID, minScore float64,
+					_ *models.SearchFilters,
 				) ([]models.FeedbackRecordWithScore, bool, error) {
 					assert.Equal(t, "test-model", model)
 					assert.Equal(t, "env-1", tenantID)
@@ -212,7 +218,7 @@ func TestSearchService_SimilarFeedback(t *testing.T) {
 			},
 			Model: "test-model",
 		})
-		res, err := svc.SimilarFeedback(context.Background(), sourceID, "env-1", 10, 0.5, "")
+		res, err := svc.SimilarFeedback(context.Background(), sourceID, "env-1", 10, 0.5, "", nil)
 		require.NoError(t, err)
 		require.Len(t, res.Results, 1)
 		assert.Equal(t, similarID, res.Results[0].FeedbackRecordID)
@@ -236,7 +242,7 @@ func TestSearchService_SemanticSearch_EmbeddingError(t *testing.T) {
 		EmbeddingsRepo: &mockEmbeddingsRepoForSearch{},
 		Model:          "test-model",
 	})
-	res, err := svc.SemanticSearch(context.Background(), "query", "env-1", 10, 0, "")
+	res, err := svc.SemanticSearch(context.Background(), "query", "env-1", 10, 0, "", nil)
 	assert.Empty(t, res.Results)
 	assert.ErrorIs(t, err, embeddingErr)
 }

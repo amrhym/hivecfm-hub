@@ -67,6 +67,13 @@ type Config struct {
 	// Embeddings: if true, L2-normalize vectors before storing or caching (env EMBEDDING_NORMALIZE); default false
 	EmbeddingNormalize bool
 
+	// Sentiment analysis: model name for chat completions; env SENTIMENT_MODEL; default "gpt-4o-mini"
+	SentimentModel string
+	// Sentiment analysis: max concurrent workers for the sentiment River queue; default 3
+	SentimentMaxConcurrent int
+	// Sentiment analysis: max attempts per sentiment job (River retries); default 3
+	SentimentMaxAttempts int
+
 	// OpenTelemetry: set to "otlp" to enable metrics (OTLP push); empty = metrics disabled
 	OtelMetricsExporter string
 	// OpenTelemetry: traces exporter (e.g. "otlp", "stdout"); empty = tracing disabled.
@@ -136,6 +143,9 @@ func Load() (*Config, error) {
 		defaultWebhookMaxCount                 = 500
 		defaultEmbeddingMaxConcurrent          = 5
 		defaultEmbeddingMaxAttempts            = 3
+		defaultSentimentModel                  = "gpt-4o-mini"
+		defaultSentimentMaxConcurrent          = 3
+		defaultSentimentMaxAttempts            = 3
 	)
 
 	apiKey := os.Getenv("API_KEY")
@@ -188,6 +198,16 @@ func Load() (*Config, error) {
 		embeddingMaxAttempts = defaultEmbeddingMaxAttempts
 	}
 
+	sentimentMaxConcurrent := getEnvAsInt("SENTIMENT_MAX_CONCURRENT", defaultSentimentMaxConcurrent)
+	if sentimentMaxConcurrent <= 0 {
+		sentimentMaxConcurrent = defaultSentimentMaxConcurrent
+	}
+
+	sentimentMaxAttempts := getEnvAsInt("SENTIMENT_MAX_ATTEMPTS", defaultSentimentMaxAttempts)
+	if sentimentMaxAttempts <= 0 {
+		sentimentMaxAttempts = defaultSentimentMaxAttempts
+	}
+
 	cfg := &Config{
 		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/test_db?sslmode=disable"),
 		Port:        getEnv("PORT", "8080"),
@@ -209,6 +229,10 @@ func Load() (*Config, error) {
 		EmbeddingMaxConcurrent:  embeddingMaxConcurrent,
 		EmbeddingMaxAttempts:    embeddingMaxAttempts,
 		EmbeddingNormalize:      GetEnvAsBool("EMBEDDING_NORMALIZE", false),
+
+		SentimentModel:         getEnv("SENTIMENT_MODEL", defaultSentimentModel),
+		SentimentMaxConcurrent: sentimentMaxConcurrent,
+		SentimentMaxAttempts:   sentimentMaxAttempts,
 
 		OtelMetricsExporter: getEnv("OTEL_METRICS_EXPORTER", ""),
 		OtelTracesExporter:  getEnv("OTEL_TRACES_EXPORTER", ""),

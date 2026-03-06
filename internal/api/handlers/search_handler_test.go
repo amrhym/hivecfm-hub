@@ -18,16 +18,17 @@ import (
 
 type mockSearchService struct {
 	semanticFunc func(ctx context.Context, query, tenantID string, limit int, minScore float64,
-		cursor string) (service.SearchResult, error)
+		cursor string, filters *models.SearchFilters) (service.SearchResult, error)
 	similarFunc func(ctx context.Context, feedbackRecordID uuid.UUID, tenantID string, limit int,
-		minScore float64, cursor string) (service.SearchResult, error)
+		minScore float64, cursor string, filters *models.SearchFilters) (service.SearchResult, error)
 }
 
 func (m *mockSearchService) SemanticSearch(
 	ctx context.Context, query, tenantID string, limit int, minScore float64, cursor string,
+	filters *models.SearchFilters,
 ) (service.SearchResult, error) {
 	if m.semanticFunc != nil {
-		return m.semanticFunc(ctx, query, tenantID, limit, minScore, cursor)
+		return m.semanticFunc(ctx, query, tenantID, limit, minScore, cursor, filters)
 	}
 
 	return service.SearchResult{}, nil
@@ -35,9 +36,10 @@ func (m *mockSearchService) SemanticSearch(
 
 func (m *mockSearchService) SimilarFeedback(
 	ctx context.Context, feedbackRecordID uuid.UUID, tenantID string, limit int, minScore float64, cursor string,
+	filters *models.SearchFilters,
 ) (service.SearchResult, error) {
 	if m.similarFunc != nil {
-		return m.similarFunc(ctx, feedbackRecordID, tenantID, limit, minScore, cursor)
+		return m.similarFunc(ctx, feedbackRecordID, tenantID, limit, minScore, cursor, filters)
 	}
 
 	return service.SearchResult{}, nil
@@ -60,7 +62,7 @@ func TestSearchHandler_SemanticSearch(t *testing.T) {
 	t.Run("empty query returns 400", func(t *testing.T) {
 		called := false
 		mock := &mockSearchService{
-			semanticFunc: func(_ context.Context, _, _ string, _ int, _ float64, _ string) (service.SearchResult, error) {
+			semanticFunc: func(_ context.Context, _, _ string, _ int, _ float64, _ string, _ *models.SearchFilters) (service.SearchResult, error) {
 				called = true
 
 				return service.SearchResult{}, service.ErrEmptyQuery
@@ -86,7 +88,7 @@ func TestSearchHandler_SemanticSearch(t *testing.T) {
 		val2 := "Dashboard loads fast."
 		mock := &mockSearchService{
 			semanticFunc: func(_ context.Context, query, tenantID string, limit int, minScore float64,
-				cursor string,
+				cursor string, _ *models.SearchFilters,
 			) (service.SearchResult, error) {
 				assert.Equal(t, "login is slow", query)
 				assert.Equal(t, "env-1", tenantID)
@@ -131,7 +133,7 @@ func TestSearchHandler_SemanticSearch(t *testing.T) {
 
 	t.Run("invalid cursor returns 400", func(t *testing.T) {
 		mock := &mockSearchService{
-			semanticFunc: func(_ context.Context, _, _ string, _ int, _ float64, cursor string) (service.SearchResult, error) {
+			semanticFunc: func(_ context.Context, _, _ string, _ int, _ float64, cursor string, _ *models.SearchFilters) (service.SearchResult, error) {
 				if cursor != "" {
 					return service.SearchResult{}, service.ErrInvalidCursor
 				}
@@ -170,7 +172,7 @@ func TestSearchHandler_SimilarFeedback(t *testing.T) {
 
 	t.Run("embedding not found returns 404", func(t *testing.T) {
 		mock := &mockSearchService{
-			similarFunc: func(_ context.Context, _ uuid.UUID, _ string, _ int, _ float64, _ string) (service.SearchResult, error) {
+			similarFunc: func(_ context.Context, _ uuid.UUID, _ string, _ int, _ float64, _ string, _ *models.SearchFilters) (service.SearchResult, error) {
 				return service.SearchResult{}, service.ErrEmbeddingNotFound
 			},
 		}
@@ -191,7 +193,7 @@ func TestSearchHandler_SimilarFeedback(t *testing.T) {
 		similarVal := "Similar feedback text."
 		mock := &mockSearchService{
 			similarFunc: func(_ context.Context, fid uuid.UUID, tenantID string, limit int, minScore float64,
-				cursor string,
+				cursor string, _ *models.SearchFilters,
 			) (service.SearchResult, error) {
 				assert.Equal(t, id, fid)
 				assert.Equal(t, "env-1", tenantID)

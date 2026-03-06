@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -170,16 +172,16 @@ func (r *EmbeddingsRepository) GetEmbeddingByFeedbackRecordAndModelAndTenant(
 // full-precision query vector (no quantization); sets hnsw.ef_search for better recall. Over-fetches
 // then trims to limit to account for tenant/minScore filtering. excludeID optionally excludes one
 // feedback record (e.g. for "similar" endpoint). First page only; use NearestFeedbackRecordsByEmbeddingAfterCursor for next pages.
+// filters is optional; when non-nil, source_id/since/until narrow results.
 func (r *EmbeddingsRepository) NearestFeedbackRecordsByEmbedding(
 	ctx context.Context, model string, queryEmbedding []float32, tenantID string, limit int, excludeID *uuid.UUID, minScore float64,
+	filters *models.SearchFilters,
 ) ([]models.FeedbackRecordWithScore, bool, error) {
 	if len(queryEmbedding) != models.EmbeddingVectorDimensions {
 		return nil, false, fmt.Errorf("%w: got %d, want %d", ErrEmbeddingDimensionMismatch, len(queryEmbedding), models.EmbeddingVectorDimensions)
 	}
 
-	// Full-precision query vector (ephemeral); pgvector compares vector vs halfvec natively.
 	queryVec := pgvector.NewVector(queryEmbedding)
-
 	fetchLimit := min(limit*nearestOverFetchFactor, maxNearestFetchLimit)
 
 	dbTx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
@@ -193,99 +195,72 @@ func (r *EmbeddingsRepository) NearestFeedbackRecordsByEmbedding(
 		}
 	}()
 
-	// SET LOCAL does not support bound parameters; value is a package constant.
 	if _, err := dbTx.Exec(ctx, fmt.Sprintf("SET LOCAL hnsw.ef_search = %d", hnswEfSearch)); err != nil {
 		return nil, false, fmt.Errorf("set hnsw.ef_search: %w", err)
 	}
 
-	var rows pgx.Rows
-	if excludeID == nil {
-		rows, err = dbTx.Query(ctx, `
-			SELECT e.feedback_record_id, (1 - (e.embedding <=> $1)) AS score, COALESCE(fr.field_label, ''), fr.value_text
-			FROM embeddings e
-			INNER JOIN feedback_records fr ON fr.id = e.feedback_record_id
-			WHERE e.model = $2 AND fr.tenant_id = $3
-			ORDER BY (e.embedding <=> $1), e.feedback_record_id
-			LIMIT $4`, queryVec, model, tenantID, fetchLimit)
-	} else {
-		rows, err = dbTx.Query(ctx, `
-			SELECT e.feedback_record_id, (1 - (e.embedding <=> $1)) AS score, COALESCE(fr.field_label, ''), fr.value_text
-			FROM embeddings e
-			INNER JOIN feedback_records fr ON fr.id = e.feedback_record_id
-			WHERE e.model = $2 AND fr.tenant_id = $3 AND e.feedback_record_id != $4
-			ORDER BY (e.embedding <=> $1), e.feedback_record_id
-			LIMIT $5`, queryVec, model, tenantID, *excludeID, fetchLimit)
+	// Build dynamic query with optional filters.
+	args := []any{queryVec, model, tenantID}
+	whereClauses := []string{"e.model = $2", "fr.tenant_id = $3"}
+
+	nextParam := 4
+	if excludeID != nil {
+		whereClauses = append(whereClauses, fmt.Sprintf("e.feedback_record_id != $%d", nextParam))
+		args = append(args, *excludeID)
+		nextParam++
 	}
 
+	nextParam = appendFilterClauses(&whereClauses, &args, nextParam, filters)
+
+	query := fmt.Sprintf(`
+		SELECT e.feedback_record_id, (1 - (e.embedding <=> $1)) AS score,
+			COALESCE(fr.field_label, ''), fr.value_text,
+			COALESCE(fr.source_id, ''), COALESCE(fr.source_name, ''),
+			fr.submission_id, fr.collected_at, fr.metadata
+		FROM embeddings e
+		INNER JOIN feedback_records fr ON fr.id = e.feedback_record_id
+		WHERE %s
+		ORDER BY (e.embedding <=> $1), e.feedback_record_id
+		LIMIT $%d`, strings.Join(whereClauses, " AND "), nextParam)
+	args = append(args, fetchLimit)
+
+	rows, err := dbTx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("nearest feedback records: %w", err)
 	}
 
 	defer rows.Close()
 
-	var (
-		results  []models.FeedbackRecordWithScore
-		rowCount int
-	)
-
-	brokeWithFullPage := false
-
-	for rows.Next() {
-		rowCount++
-
-		var (
-			row       models.FeedbackRecordWithScore
-			valueText *string
-		)
-		if err := rows.Scan(&row.FeedbackRecordID, &row.Score, &row.FieldLabel, &valueText); err != nil {
-			return nil, false, fmt.Errorf("scan feedback record with score: %w", err)
-		}
-
-		if valueText != nil {
-			row.ValueText = *valueText
-		}
-
-		if row.Score >= minScore {
-			results = append(results, row)
-			if len(results) >= limit {
-				brokeWithFullPage = true
-
-				break
-			}
-		}
+	results, rowCount, brokeWithFullPage, err := scanEnrichedResults(rows, limit, minScore)
+	if err != nil {
+		return nil, false, err
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, false, fmt.Errorf("iterating nearest: %w", err)
-	}
-
-	// Close rows before Commit so the connection is not busy (avoids "conn busy" when breaking early from the loop).
 	rows.Close()
 
 	if err := dbTx.Commit(ctx); err != nil {
 		slog.Error("nearest feedback records: commit failed", "error", err)
-
 		return nil, false, fmt.Errorf("commit: %w", err)
 	}
 
 	hasMore := brokeWithFullPage || rowCount >= fetchLimit
-
 	return results, hasMore, nil
 }
 
 // NearestFeedbackRecordsByEmbeddingAfterCursor returns the next page of nearest neighbors after the given
 // cursor (lastDistance, lastFeedbackRecordID). Order is by (distance ASC, feedback_record_id ASC). minScore
 // is applied in application code; query uses full-precision vector and hnsw.ef_search like NearestFeedbackRecordsByEmbedding.
+// filters is optional; when non-nil, source_id/since/until narrow results.
 func (r *EmbeddingsRepository) NearestFeedbackRecordsByEmbeddingAfterCursor(
 	ctx context.Context, model string, queryEmbedding []float32, tenantID string, limit int,
 	lastDistance float64, lastFeedbackRecordID uuid.UUID, excludeID *uuid.UUID, minScore float64,
+	filters *models.SearchFilters,
 ) ([]models.FeedbackRecordWithScore, bool, error) {
 	if len(queryEmbedding) != models.EmbeddingVectorDimensions {
 		return nil, false, fmt.Errorf("%w: got %d, want %d", ErrEmbeddingDimensionMismatch, len(queryEmbedding), models.EmbeddingVectorDimensions)
 	}
 
 	queryVec := pgvector.NewVector(queryEmbedding)
-
 	fetchLimit := min(limit*nearestOverFetchFactor, maxNearestFetchLimit)
 
 	dbTx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
@@ -299,44 +274,103 @@ func (r *EmbeddingsRepository) NearestFeedbackRecordsByEmbeddingAfterCursor(
 		}
 	}()
 
-	// SET LOCAL does not support bound parameters; value is a package constant.
 	if _, err := dbTx.Exec(ctx, fmt.Sprintf("SET LOCAL hnsw.ef_search = %d", hnswEfSearch)); err != nil {
 		return nil, false, fmt.Errorf("set hnsw.ef_search: %w", err)
 	}
 
-	var rows pgx.Rows
-	if excludeID == nil {
-		rows, err = dbTx.Query(ctx, `
-			SELECT e.feedback_record_id, (1 - (e.embedding <=> $1)) AS score, COALESCE(fr.field_label, ''), fr.value_text
-			FROM embeddings e
-			INNER JOIN feedback_records fr ON fr.id = e.feedback_record_id
-			WHERE e.model = $2 AND fr.tenant_id = $3
-			  AND ((e.embedding <=> $1), e.feedback_record_id) > ($4, $5)
-			ORDER BY (e.embedding <=> $1), e.feedback_record_id
-			LIMIT $6`, queryVec, model, tenantID, lastDistance, lastFeedbackRecordID, fetchLimit)
-	} else {
-		rows, err = dbTx.Query(ctx, `
-			SELECT e.feedback_record_id, (1 - (e.embedding <=> $1)) AS score, COALESCE(fr.field_label, ''), fr.value_text
-			FROM embeddings e
-			INNER JOIN feedback_records fr ON fr.id = e.feedback_record_id
-			WHERE e.model = $2 AND fr.tenant_id = $3 AND e.feedback_record_id != $4
-			  AND ((e.embedding <=> $1), e.feedback_record_id) > ($5, $6)
-			ORDER BY (e.embedding <=> $1), e.feedback_record_id
-			LIMIT $7`, queryVec, model, tenantID, *excludeID, lastDistance, lastFeedbackRecordID, fetchLimit)
+	// Build dynamic query with cursor and optional filters.
+	args := []any{queryVec, model, tenantID}
+	whereClauses := []string{"e.model = $2", "fr.tenant_id = $3"}
+
+	nextParam := 4
+	if excludeID != nil {
+		whereClauses = append(whereClauses, fmt.Sprintf("e.feedback_record_id != $%d", nextParam))
+		args = append(args, *excludeID)
+		nextParam++
 	}
 
+	// Cursor condition.
+	whereClauses = append(whereClauses, fmt.Sprintf("((e.embedding <=> $1), e.feedback_record_id) > ($%d, $%d)", nextParam, nextParam+1))
+	args = append(args, lastDistance, lastFeedbackRecordID)
+	nextParam += 2
+
+	nextParam = appendFilterClauses(&whereClauses, &args, nextParam, filters)
+
+	query := fmt.Sprintf(`
+		SELECT e.feedback_record_id, (1 - (e.embedding <=> $1)) AS score,
+			COALESCE(fr.field_label, ''), fr.value_text,
+			COALESCE(fr.source_id, ''), COALESCE(fr.source_name, ''),
+			fr.submission_id, fr.collected_at, fr.metadata
+		FROM embeddings e
+		INNER JOIN feedback_records fr ON fr.id = e.feedback_record_id
+		WHERE %s
+		ORDER BY (e.embedding <=> $1), e.feedback_record_id
+		LIMIT $%d`, strings.Join(whereClauses, " AND "), nextParam)
+	args = append(args, fetchLimit)
+
+	rows, err := dbTx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("nearest feedback records after cursor: %w", err)
 	}
 
 	defer rows.Close()
 
-	var (
-		results  []models.FeedbackRecordWithScore
-		rowCount int
-	)
+	results, rowCount, brokeWithFullPage, err := scanEnrichedResults(rows, limit, minScore)
+	if err != nil {
+		return nil, false, err
+	}
 
-	brokeWithFullPage := false
+	rows.Close()
+
+	if err := dbTx.Commit(ctx); err != nil {
+		slog.Error("nearest feedback records after cursor: commit failed", "error", err)
+		return nil, false, fmt.Errorf("commit: %w", err)
+	}
+
+	hasMore := brokeWithFullPage || rowCount >= fetchLimit
+	return results, hasMore, nil
+}
+
+// appendFilterClauses adds optional source_id, since, until WHERE conditions. Returns the next available parameter number.
+func appendFilterClauses(whereClauses *[]string, args *[]any, nextParam int, filters *models.SearchFilters) int {
+	if filters == nil {
+		return nextParam
+	}
+
+	if filters.SourceID != nil {
+		*whereClauses = append(*whereClauses, fmt.Sprintf("fr.source_id = $%d", nextParam))
+		*args = append(*args, *filters.SourceID)
+		nextParam++
+	}
+
+	if filters.Since != nil {
+		*whereClauses = append(*whereClauses, fmt.Sprintf("fr.collected_at >= $%d", nextParam))
+		*args = append(*args, *filters.Since)
+		nextParam++
+	}
+
+	if filters.Until != nil {
+		*whereClauses = append(*whereClauses, fmt.Sprintf("fr.collected_at <= $%d", nextParam))
+		*args = append(*args, *filters.Until)
+		nextParam++
+	}
+
+	return nextParam
+}
+
+// sentimentMeta holds sentiment fields extracted from metadata JSON.
+type sentimentMeta struct {
+	Sentiment string  `json:"sentiment"`
+	Score     float64 `json:"sentiment_score"`
+}
+
+// scanEnrichedResults scans rows from the enriched SELECT into FeedbackRecordWithScore, extracting sentiment from metadata.
+func scanEnrichedResults(rows pgx.Rows, limit int, minScore float64) ([]models.FeedbackRecordWithScore, int, bool, error) {
+	var (
+		results         []models.FeedbackRecordWithScore
+		rowCount        int
+		brokeWithFullPage bool
+	)
 
 	for rows.Next() {
 		rowCount++
@@ -344,39 +378,47 @@ func (r *EmbeddingsRepository) NearestFeedbackRecordsByEmbeddingAfterCursor(
 		var (
 			row       models.FeedbackRecordWithScore
 			valueText *string
+			sourceID  string
+			sourceName string
+			metadata  []byte
 		)
-		if err := rows.Scan(&row.FeedbackRecordID, &row.Score, &row.FieldLabel, &valueText); err != nil {
-			return nil, false, fmt.Errorf("scan feedback record with score: %w", err)
+
+		if err := rows.Scan(
+			&row.FeedbackRecordID, &row.Score, &row.FieldLabel, &valueText,
+			&sourceID, &sourceName,
+			&row.SubmissionID, &row.CollectedAt, &metadata,
+		); err != nil {
+			return nil, 0, false, fmt.Errorf("scan feedback record with score: %w", err)
 		}
 
 		if valueText != nil {
 			row.ValueText = *valueText
 		}
 
+		row.SourceID = sourceID
+		row.SourceName = sourceName
+
+		// Extract sentiment from metadata JSON if present.
+		if len(metadata) > 0 {
+			var sm sentimentMeta
+			if err := json.Unmarshal(metadata, &sm); err == nil {
+				row.Sentiment = sm.Sentiment
+				row.SentimentScore = sm.Score
+			}
+		}
+
 		if row.Score >= minScore {
 			results = append(results, row)
 			if len(results) >= limit {
 				brokeWithFullPage = true
-
 				break
 			}
 		}
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, false, fmt.Errorf("iterating nearest after cursor: %w", err)
+		return nil, 0, false, fmt.Errorf("iterating nearest: %w", err)
 	}
 
-	// Close rows before Commit so the connection is not busy.
-	rows.Close()
-
-	if err := dbTx.Commit(ctx); err != nil {
-		slog.Error("nearest feedback records after cursor: commit failed", "error", err)
-
-		return nil, false, fmt.Errorf("commit: %w", err)
-	}
-
-	hasMore := brokeWithFullPage || rowCount >= fetchLimit
-
-	return results, hasMore, nil
+	return results, rowCount, brokeWithFullPage, nil
 }

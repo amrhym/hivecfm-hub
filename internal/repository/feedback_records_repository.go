@@ -3,6 +3,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -376,6 +377,22 @@ func (r *FeedbackRecordsRepository) Update(
 	}
 
 	return &record, nil
+}
+
+// UpdateMetadata sets the metadata column for a feedback record.
+func (r *FeedbackRecordsRepository) UpdateMetadata(ctx context.Context, id uuid.UUID, metadata json.RawMessage) error {
+	query := `UPDATE feedback_records SET metadata = $1, updated_at = $2 WHERE id = $3`
+
+	result, err := r.db.Exec(ctx, query, metadata, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to update feedback record metadata: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return huberrors.NewNotFoundError("feedback record", "feedback record not found")
+	}
+
+	return nil
 }
 
 // Delete removes a feedback record.
