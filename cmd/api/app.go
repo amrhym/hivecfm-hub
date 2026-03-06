@@ -255,12 +255,13 @@ func NewApp(cfg *config.Config, db *pgxpool.Pool) (*App, error) {
 		}
 
 		searchService := service.NewSearchService(service.SearchServiceParams{
-			EmbeddingClient: embeddingClient,
-			EmbeddingsRepo:  embeddingsRepo,
-			Model:           embeddingModel,
-			QueryCache:      queryCache,
-			CacheMetrics:    cacheMetrics,
-			Logger:          slog.Default(),
+			EmbeddingClient:     embeddingClient,
+			EmbeddingsRepo:      embeddingsRepo,
+			SentimentClassifier: chatClient,
+			Model:               embeddingModel,
+			QueryCache:          queryCache,
+			CacheMetrics:        cacheMetrics,
+			Logger:              slog.Default(),
 		})
 		searchHandler = handlers.NewSearchHandler(searchService)
 	} else {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 
 	"github.com/google/uuid"
@@ -17,6 +18,20 @@ import (
 )
 
 const searchQueryEmbeddingCacheName = "search_query_embedding"
+
+// Sentiment re-ranking tuning constants.
+const (
+	// sentimentBoostFactor is the maximum score multiplier boost for matching sentiment (e.g. 0.20 = up to 20% boost).
+	sentimentBoostFactor = 0.20
+	// sentimentPenaltyFactor is the maximum score multiplier penalty for opposing sentiment (e.g. 0.20 = up to 20% penalty).
+	sentimentPenaltyFactor = 0.20
+)
+
+// SentimentClassifier classifies the sentiment of a text query.
+// Returns sentiment label (positive/negative/neutral) and confidence (0-1).
+type SentimentClassifier interface {
+	ClassifySentiment(ctx context.Context, text string) (string, float64, error)
+}
 
 // Sentinel errors for search (used by handlers for status mapping).
 var (
@@ -44,23 +59,25 @@ type EmbeddingsRepositoryForSearch interface {
 
 // SearchService performs semantic search and similar-feedback lookups using embeddings.
 type SearchService struct {
-	embeddingClient EmbeddingClient
-	embeddingsRepo  EmbeddingsRepositoryForSearch
-	model           string
-	queryCache      *lru.Cache[string, []float32]
-	queryLoadGroup  singleflight.Group
-	cacheMetrics    observability.CacheMetrics
-	logger          *slog.Logger
+	embeddingClient     EmbeddingClient
+	embeddingsRepo      EmbeddingsRepositoryForSearch
+	sentimentClassifier SentimentClassifier
+	model               string
+	queryCache          *lru.Cache[string, []float32]
+	queryLoadGroup      singleflight.Group
+	cacheMetrics        observability.CacheMetrics
+	logger              *slog.Logger
 }
 
-// SearchServiceParams configures SearchService. QueryCache and CacheMetrics may be nil (no caching).
+// SearchServiceParams configures SearchService. QueryCache, CacheMetrics, and SentimentClassifier may be nil.
 type SearchServiceParams struct {
-	EmbeddingClient EmbeddingClient
-	EmbeddingsRepo  EmbeddingsRepositoryForSearch
-	Model           string
-	QueryCache      *lru.Cache[string, []float32]
-	CacheMetrics    observability.CacheMetrics
-	Logger          *slog.Logger
+	EmbeddingClient     EmbeddingClient
+	EmbeddingsRepo      EmbeddingsRepositoryForSearch
+	SentimentClassifier SentimentClassifier
+	Model               string
+	QueryCache          *lru.Cache[string, []float32]
+	CacheMetrics        observability.CacheMetrics
+	Logger              *slog.Logger
 }
 
 // NewSearchService creates a SearchService.
@@ -71,12 +88,13 @@ func NewSearchService(p SearchServiceParams) *SearchService {
 	}
 
 	return &SearchService{
-		embeddingClient: p.EmbeddingClient,
-		embeddingsRepo:  p.EmbeddingsRepo,
-		model:           p.Model,
-		queryCache:      p.QueryCache,
-		cacheMetrics:    p.CacheMetrics,
-		logger:          logger,
+		embeddingClient:     p.EmbeddingClient,
+		embeddingsRepo:      p.EmbeddingsRepo,
+		sentimentClassifier: p.SentimentClassifier,
+		model:               p.Model,
+		queryCache:          p.QueryCache,
+		cacheMetrics:        p.CacheMetrics,
+		logger:              logger,
 	}
 }
 
@@ -137,6 +155,8 @@ func (s *SearchService) SemanticSearch(
 
 		return out, fmt.Errorf("nearest feedback records: %w", err)
 	}
+
+	results = s.reRankBySentiment(ctx, query, results)
 
 	out.Results = results
 	if hasMore && len(results) > 0 {
@@ -253,4 +273,50 @@ func (s *SearchService) getQueryEmbeddingCached(ctx context.Context, query strin
 	}
 
 	return val.([]float32), nil
+}
+
+// reRankBySentiment adjusts result scores based on whether the query's sentiment matches each result's sentiment.
+// Matching sentiment gets a boost; opposing sentiment (positive↔negative) gets a penalty. Neutral is unaffected.
+// If no SentimentClassifier is configured or the classification fails, results are returned unchanged.
+func (s *SearchService) reRankBySentiment(ctx context.Context, query string, results []models.FeedbackRecordWithScore) []models.FeedbackRecordWithScore {
+	if s.sentimentClassifier == nil || len(results) == 0 {
+		return results
+	}
+
+	querySentiment, _, err := s.sentimentClassifier.ClassifySentiment(ctx, query)
+	if err != nil {
+		s.logger.Warn("sentiment re-rank: query classification failed, skipping", "error", err)
+
+		return results
+	}
+
+	if querySentiment == "neutral" {
+		return results
+	}
+
+	for i := range results {
+		resultSentiment := results[i].Sentiment
+		if resultSentiment == "" || resultSentiment == "neutral" {
+			continue
+		}
+
+		confidence := results[i].SentimentScore
+		if confidence <= 0 {
+			continue
+		}
+
+		if resultSentiment == querySentiment {
+			// Matching sentiment: boost.
+			results[i].Score *= 1 + sentimentBoostFactor*confidence
+		} else {
+			// Opposing sentiment (positive vs negative): penalize.
+			results[i].Score *= 1 - sentimentPenaltyFactor*confidence
+		}
+	}
+
+	sort.SliceStable(results, func(i, j int) bool {
+		return results[i].Score > results[j].Score
+	})
+
+	return results
 }
