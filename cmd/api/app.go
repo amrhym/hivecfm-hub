@@ -49,13 +49,15 @@ var (
 )
 
 const (
-	embeddingProviderOpenAI = "openai"
-	embeddingProviderGoogle = "google"
+	embeddingProviderOpenAI      = "openai"
+	embeddingProviderAzureOpenAI = "azure_openai"
+	embeddingProviderGoogle      = "google"
 )
 
 var supportedEmbeddingProviders = map[string]struct{}{
-	embeddingProviderOpenAI: {},
-	embeddingProviderGoogle: {},
+	embeddingProviderOpenAI:      {},
+	embeddingProviderAzureOpenAI: {},
+	embeddingProviderGoogle:      {},
 }
 
 const riverQueueDepthInterval = 15 * time.Second
@@ -203,7 +205,7 @@ func NewApp(cfg *config.Config, db *pgxpool.Pool) (*App, error) {
 
 	if embeddingProviderName != "" {
 		// Fail fast when a provider that requires an API key is configured without one (consistent with backfill-embeddings).
-		if (embeddingProviderName == embeddingProviderOpenAI || embeddingProviderName == embeddingProviderGoogle) &&
+		if (embeddingProviderName == embeddingProviderOpenAI || embeddingProviderName == embeddingProviderGoogle || embeddingProviderName == embeddingProviderAzureOpenAI) &&
 			cfg.EmbeddingProviderAPIKey == "" {
 			return nil, fmt.Errorf("%w: %s", errEmbeddingProviderAPIKeyRequired, embeddingProviderName)
 		}
@@ -220,6 +222,13 @@ func NewApp(cfg *config.Config, db *pgxpool.Pool) (*App, error) {
 				clientOpts = append(clientOpts, openai.WithBaseURL(cfg.EmbeddingProviderBaseURL))
 			}
 			embeddingClient = openai.NewClient(cfg.EmbeddingProviderAPIKey, clientOpts...)
+		case embeddingProviderAzureOpenAI:
+			embeddingClient = openai.NewAzureClient(
+				cfg.EmbeddingProviderBaseURL,
+				cfg.EmbeddingProviderAPIKey,
+				embeddingModel,
+				cfg.EmbeddingNormalize,
+			)
 		case embeddingProviderGoogle:
 			googleClient, err := googleai.NewClient(context.Background(), cfg.EmbeddingProviderAPIKey,
 				googleai.WithModel(embeddingModel),
@@ -238,7 +247,12 @@ func NewApp(cfg *config.Config, db *pgxpool.Pool) (*App, error) {
 			feedbackRecordsService, embeddingClient, embeddingDocPrefix, embeddingMetrics)
 		river.AddWorker(riverWorkers, embeddingWorker)
 
-		chatClient := openai.NewChatClient(cfg.EmbeddingProviderAPIKey, cfg.SentimentModel)
+		var chatClient *openai.ChatClient
+		if embeddingProviderName == embeddingProviderAzureOpenAI {
+			chatClient = openai.NewAzureChatClient(cfg.EmbeddingProviderBaseURL, cfg.EmbeddingProviderAPIKey, cfg.SentimentModel)
+		} else {
+			chatClient = openai.NewChatClient(cfg.EmbeddingProviderAPIKey, cfg.SentimentModel)
+		}
 		sentimentWorker := workers.NewSentimentAnalysisWorker(chatClient, feedbackRecordsService)
 		river.AddWorker(riverWorkers, sentimentWorker)
 
